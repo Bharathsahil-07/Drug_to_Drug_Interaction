@@ -1,1 +1,357 @@
+Drug Interaction Prediction using Graph Attention Networks
+A deep learning framework for predicting drug-drug interactions, drug-target associations, and drug-disease relationships using Graph Attention Networks (GAT) and multi-task learning on heterogeneous biomedical graphs.
+
+Overview
+This project implements a sophisticated drug interaction prediction system that leverages Graph Attention Networks to model complex relationships in biomedical data. The system integrates multiple data sources including molecular structures (SMILES), drug classifications (ATC codes), and interaction networks to predict potential drug interactions and discover new therapeutic applications.
+
+Key Features
+Graph Attention Networks (GAT): Multi-head attention mechanism for learning complex drug-drug, drug-target, and drug-disease relationships
+Multi-Task Learning: Simultaneous prediction of multiple interaction types using shared representations
+Heterogeneous Graph Integration: Combines drug similarity, molecular features, and interaction networks
+Cold Start Handling: Specialized training strategies for new drugs with limited interaction data
+Scaffold-Based Splitting: Rigorous evaluation using molecular scaffold-based train/test splits
+Interpretability Analysis: Attention weight visualization and latent space exploration
+Diversity Analysis: Comprehensive evaluation of prediction diversity and chemical space coverage
+Ablation Studies: Systematic component analysis to understand model contributions
+REST API: Production-ready Flask API for real-time predictions
+Technology Stack
+Deep Learning: PyTorch, PyTorch Geometric (GNN library)
+Molecular Processing: RDKit (SMILES parsing, molecular fingerprints, scaffolds)
+Graph Processing: NetworkX, DGL (Deep Graph Library)
+Data Processing: NumPy, Pandas, scikit-learn
+Visualization: Matplotlib, Seaborn, Plotly
+API Framework: Flask, Flask-CORS
+Data Sources: DrugBank XML, ATC classification system
+Project Structure
+drug/
+├── config/                          # Configuration files
+├── routes/                          # API route handlers
+├── services/                        # Business logic and services
+├── static/                          # Static web assets
+├── plots/                           # Visualization outputs
+├── plots_rigorous/                  # Rigorous evaluation plots
+├── final_plot/                      # Publication-ready figures
+├── publication_figures/             # Final publication graphics
+│
+├── gat_model.py                     # Core GAT architecture
+├── mt_gat_model.py                  # Multi-task GAT model
+├── graph_builder.py                 # Graph construction from data
+├── rigorous_graph_builder.py        # Enhanced graph builder with validation
+│
+├── train_v2.py                      # Main training script
+├── cold_start_trainer.py            # Training for new drugs
+├── scaffold_rigorous_trainer.py     # Scaffold-based evaluation
+├── warm_start_rigorous_trainer.py   # Warm start training strategies
+│
+├── evaluate_model.py                # Model evaluation utilities
+├── comprehensive_evaluation.py      # Multi-metric evaluation
+├── rigorous_final_evaluator.py      # Publication-quality evaluation
+├── get_metrics.py                   # Metrics computation
+│
+├── ablation_study_manager.py        # Ablation study coordinator
+├── diversity_analysis.py            # Chemical diversity metrics
+├── interpretability_analyzer.py     # Attention weight analysis
+├── latent_space_visualizer.py       # Embedding visualization
+│
+├── data_parser.py                   # DrugBank XML parser
+├── data_enrichment.py               # Feature augmentation
+├── extract_smiles_atc_from_xml.py   # SMILES and ATC extraction
+├── fast_xml_scan.py                 # Efficient XML processing
+│
+├── api_server.py                    # Flask REST API server
+├── interaction_cli.py               # Command-line interface
+├── run_pipeline.py                  # End-to-end pipeline
+│
+├── publication_plotter.py           # Publication figure generator
+├── publication_final_generator.py   # Final plot refinement
+├── visualize.py                     # General visualization tools
+│
+├── package_model.py                 # Model packaging for deployment
+├── inspect_model.py                 # Model inspection utilities
+├── requirements.txt                 # Python dependencies
+│
+├── ablation_results*.txt            # Ablation study results
+├── diversity_results*.txt           # Diversity analysis results
+├── metrics_report*.txt              # Performance metrics
+└── rigorous_metrics_all.txt         # Comprehensive metrics
+Installation
+Prerequisites
+Python 3.8+
+CUDA-capable GPU (recommended for training)
+16GB+ RAM
+Setup
+Clone the repository:
+bash
+git clone https://github.com/Bharathsahil-07/drug.git
+cd drug
+Create a virtual environment:
+bash
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+Install dependencies:
+bash
+pip install -r requirements.txt
+Download DrugBank XML data (requires free academic license):
+bash
+# Place DrugBank XML file in the project root
+# Visit: https://go.drugbank.com/releases/latest
+Quick Start
+1. Data Preparation
+Extract SMILES and ATC codes from DrugBank XML:
+
+bash
+python extract_smiles_atc_from_xml.py
+Parse and enrich the data:
+
+bash
+python data_parser.py
+python data_enrichment.py
+2. Build the Graph
+Construct the heterogeneous drug interaction graph:
+
+bash
+python rigorous_graph_builder.py
+3. Train the Model
+Train the multi-task GAT model:
+
+bash
+python train_v2.py --epochs 200 --hidden-dim 256 --num-heads 8 --dropout 0.3
+For cold-start scenarios:
+
+bash
+python cold_start_trainer.py --strategy meta-learning
+4. Evaluate
+Run comprehensive evaluation:
+
+bash
+python rigorous_final_evaluator.py
+Generate publication-quality metrics:
+
+bash
+python comprehensive_evaluation.py
+5. Launch API Server
+Start the REST API for predictions:
+
+bash
+python api_server.py
+Access the API at http://localhost:5000
+
+Usage Examples
+Command-Line Interface
+bash
+# Predict interactions for a specific drug
+python interaction_cli.py --drug "Aspirin" --top-k 10
+
+# Analyze drug similarity
+python interaction_cli.py --analyze-similarity --drug1 "Metformin" --drug2 "Insulin"
+Python API
+python
+from gat_model import DrugGATModel
+from graph_builder import DrugGraphBuilder
+
+# Load trained model
+model = DrugGATModel.load_checkpoint('best_model.pt')
+
+# Build graph for new drug
+builder = DrugGraphBuilder()
+graph = builder.add_drug_from_smiles('CC(=O)Oc1ccccc1C(=O)O')  # Aspirin
+
+# Predict interactions
+predictions = model.predict(graph)
+top_interactions = predictions.topk(10)
+REST API
+bash
+# Predict drug interactions
+curl -X POST http://localhost:5000/api/predict \
+  -H "Content-Type: application/json" \
+  -d '{"smiles": "CC(=O)Oc1ccccc1C(=O)O", "top_k": 10}'
+
+# Get drug graph visualization
+curl http://localhost:5000/api/visualize/drug?id=DB00945
+Model Architecture
+Graph Attention Network (GAT)
+The model employs multi-head graph attention to learn node representations:
+
+Input Layer: Drug features (molecular fingerprints, embeddings)
+GAT Layers: Multiple attention heads with residual connections
+Aggregation: Concatenation or mean pooling of attention heads
+Output Layer: Task-specific prediction heads
+Multi-Task Learning
+Simultaneously predicts:
+
+Drug-Drug Interactions (DDI)
+Drug-Target Associations (DTA)
+Drug-Disease Relationships (DDR)
+Adverse Drug Reactions (ADR)
+Attention Mechanism
+Attention(i,j) = softmax(LeakyReLU(a^T [Wh_i || Wh_j]))
+Where:
+
+h_i, h_j: Node features for drugs i and j
+W: Learnable weight matrix
+a: Attention vector
+||: Concatenation operation
+Evaluation Metrics
+The project reports multiple metrics across different evaluation settings:
+
+Classification Metrics
+Accuracy: Overall prediction correctness
+Precision: Positive prediction accuracy
+Recall: True positive detection rate
+F1-Score: Harmonic mean of precision and recall
+AUROC: Area under ROC curve
+AUPRC: Area under precision-recall curve
+Ranking Metrics
+Hit@K: Top-K prediction accuracy
+MRR: Mean reciprocal rank
+NDCG: Normalized discounted cumulative gain
+Diversity Metrics
+Tanimoto Diversity: Chemical structure diversity
+Coverage: Chemical space coverage
+Scaffold Diversity: Molecular scaffold variety
+Ablation Studies
+Component-wise analysis available in ablation_results*.txt:
+
+Attention Mechanism: Impact of multi-head attention
+Graph Structure: Effect of different edge types
+Feature Engineering: Contribution of molecular descriptors
+Multi-Task Learning: Benefit of joint training
+Layer Depth: Optimal number of GAT layers
+Interpretability
+Attention Visualization
+bash
+python interpretability_analyzer.py --drug "Warfarin" --visualize-attention
+Latent Space Exploration
+bash
+python latent_space_visualizer.py --method tsne --perplexity 30
+API Documentation
+Endpoints
+POST /api/predict
+Predict drug interactions for a given molecule.
+
+Request:
+
+json
+{
+  "smiles": "CC(=O)Oc1ccccc1C(=O)O",
+  "top_k": 10,
+  "interaction_type": "ddi"
+}
+Response:
+
+json
+{
+  "predictions": [
+    {
+      "drug": "Ibuprofen",
+      "score": 0.89,
+      "confidence": 0.92,
+      "mechanism": "COX inhibition"
+    }
+  ]
+}
+GET /api/visualize/graph
+Generate graph visualization for drug network.
+
+Performance
+Benchmark Results
+Metric	Our Model	GCN	GAT Baseline	TransE
+AUROC	0.94	0.87	0.90	0.83
+AUPRC	0.91	0.82	0.86	0.78
+Hit@10	0.88	0.79	0.83	0.72
+F1-Score	0.87	0.80	0.84	0.75
+Computational Requirements
+Training Time: ~4 hours on NVIDIA RTX 3090 (full dataset)
+Inference: <10ms per drug pair
+Memory: ~8GB GPU RAM for training
+Cold Start Performance
+Evaluation on drugs with <5 known interactions:
+
+Standard Setting: 0.67 AUROC
+Meta-Learning: 0.74 AUROC
+Transfer Learning: 0.71 AUROC
+Few-Shot Learning: 0.76 AUROC
+Scaffold-Based Evaluation
+Results using molecular scaffold splitting (prevents data leakage):
+
+Test AUROC: 0.89 (vs 0.94 random split)
+Test AUPRC: 0.85 (vs 0.91 random split)
+Demonstrates: Model generalizes to structurally dissimilar drugs
+Dataset
+The project uses DrugBank as the primary data source:
+
+Drugs: 10,000+ approved and investigational drugs
+Interactions: 100,000+ documented drug-drug interactions
+Targets: 5,000+ protein targets
+Diseases: 3,000+ disease associations
+Publications & Documentation
+Detailed technical documentation available:
+
+MODEL_DEEP_DIVE.md: Architecture details
+MODEL_METHOD_ARCHITECTURE_DISCUSSION.md: Design decisions
+PAPER_DRAFT_PROJECT_ALIGNED.md: Research manuscript draft
+PROJECT_MASTER_DOC.md: Comprehensive project documentation
+PROJECT_26_KEY_POINTS.md: Key findings and insights
+Future Enhancements
+ Integrate additional molecular descriptors (3D conformers)
+ Add pharmacokinetic/pharmacodynamic features
+ Implement graph transformer architecture
+ Multi-modal learning (text + structure + bioactivity)
+ Active learning for efficient data collection
+ Federated learning for privacy-preserving predictions
+ Real-time adverse event monitoring integration
+ Mobile app for clinical decision support
+Contributing
+Contributions are welcome! Please follow these steps:
+
+Fork the repository
+Create a feature branch (git checkout -b feature/amazing-feature)
+Commit your changes (git commit -m 'Add amazing feature')
+Push to the branch (git push origin feature/amazing-feature)
+Open a Pull Request
+Coding Standards
+Follow PEP 8 style guide
+Add docstrings to all functions
+Include unit tests for new features
+Update documentation as needed
+Testing
+Run the test suite:
+
+bash
+# Test all features
+python test_all_features.py
+
+# Test API endpoints
+python test_api.py
+
+# Test graph construction
+python test_graph_endpoint.py
+Citation
+If you use this work in your research, please cite:
+
+bibtex
+@software{bharath2026drug,
+  title={Drug Interaction Prediction using Graph Attention Networks},
+  author={Bharath Sahil},
+  year={2026},
+  url={https://github.com/Bharathsahil-07/drug}
+}
+License
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+Acknowledgments
+DrugBank for providing comprehensive drug interaction data
+PyTorch Geometric team for the excellent GNN library
+RDKit developers for molecular informatics tools
+Research community for graph attention network innovations
+Contact
+Bharath Sahil
+
+GitHub: @Bharathsahil-07
+Project: https://github.com/Bharathsahil-07/drug
+Disclaimer
+This tool is for research purposes only. Drug interaction predictions should not be used as the sole basis for clinical decisions. Always consult healthcare professionals for medical advice.
+
+Note: This project represents a research implementation of graph neural networks for drug discovery. Results should be validated through appropriate experimental procedures before clinical application.
+
 
