@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Drug Interaction Network</title>
+    <script src="//unpkg.com/3d-force-graph"></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Inter:wght@300;400;600&display=swap"
+        rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #000011;
+            font-family: 'Inter', sans-serif;
+            color: white;
+        }
+
+        #graph-container {
+            width: 100vw;
+            height: 100vh;
+        }
+
+        .overlay {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 20, 0.8);
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid #3366ff;
+            backdrop-filter: blur(10px);
+            max-width: 350px;
+            z-index: 100;
+        }
+
+        h1 {
+            font-family: 'Orbitron', sans-serif;
+            color: #3366ff;
+            margin: 0 0 10px 0;
+            font-size: 1.5rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .stat-item {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 10px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #00ccff;
+        }
+
+        .stat-label {
+            font-size: 0.7rem;
+            color: #aaa;
+            text-transform: uppercase;
+        }
+
+        .controls {
+            margin-top: 20px;
+        }
+
+        button {
+            background: #3366ff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            width: 100%;
+        }
+
+        button:hover {
+            background: #254EDB;
+            transform: translateY(-2px);
+        }
+
+        .back-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            padding: 8px 16px;
+            text-decoration: none;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            backdrop-filter: blur(5px);
+            transition: background 0.3s;
+        }
+
+        .back-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 1.5rem;
+            color: #3366ff;
+            font-family: 'Orbitron', sans-serif;
+            pointer-events: none;
+        }
+
+        .model-info {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            font-size: 0.85rem;
+            color: #ccc;
+        }
+
+        .highlight {
+            color: #00ccff;
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="graph-container"></div>
+    <div id="loading" class="loading">Loading 3D Model...</div>
+
+    <a href="/" class="back-btn">← Back to Dashboard</a>
+
+    <div class="overlay">
+        <h1>DrugNet 3D</h1>
+        <p>Fast interactive view of high-signal drug interaction neighborhoods.</p>
+
+        <div class="model-info">
+            <strong>Model Architecture:</strong><br>
+            <span class="highlight">GAT (Graph Attention Network)</span><br>
+            • Multi-Head Attention (4 Heads)<br>
+            • Interaction, Severity & Confidence Heads<br>
+            • Trained on 1.4M+ Interactions
+        </div>
+
+        <div class="stats">
+            <div class="stat-item">
+                <div class="stat-value" id="node-count">-</div>
+                <div class="stat-label">Drugs</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="link-count">-</div>
+                <div class="stat-label">Interactions</div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button id="rotateBtn" onclick="toggleRotation()">Pause Rotation</button>
+            <button style="margin-top:10px;" onclick="window.location.href='/'">Open Fast 2D Graph</button>
+            <div style="margin-top: 15px;">
+                <label style="font-size: 0.8rem; color: #aaa;">Node Size</label>
+                <input type="range" min="0.5" max="3" step="0.1" value="1" style="width: 100%;"
+                    oninput="config.nodeSize = parseFloat(this.value); updateGraphVisuals();">
+            </div>
+            <div style="margin-top: 10px;">
+                <label style="font-size: 0.8rem; color: #aaa;">Link Opacity</label>
+                <input type="range" min="0" max="1" step="0.05" value="0.2" style="width: 100%;"
+                    oninput="config.linkOpacity = parseFloat(this.value); updateGraphVisuals();">
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let isRotating = true;
+        let Graph;
+
+        // Configuration
+        const config = {
+            nodeSize: 1,
+            linkOpacity: 0.25,
+            showLabels: true
+        };
+
+        function clamp(val, min, max) {
+            return Math.min(max, Math.max(min, val));
+        }
+
+        function trimGraphData(data, maxNodes, maxLinks) {
+            const nodes = Array.isArray(data.nodes) ? data.nodes : [];
+            const links = Array.isArray(data.links) ? data.links : [];
+
+            if (nodes.length <= maxNodes && links.length <= maxLinks) return data;
+
+            const keepNodes = new Set(
+                nodes
+                    .slice()
+                    .sort((a, b) => (b.val || 0) - (a.val || 0))
+                    .slice(0, maxNodes)
+                    .map(n => n.id)
+            );
+
+            const reducedNodes = nodes.filter(n => keepNodes.has(n.id));
+            const reducedLinks = links
+                .filter(l => keepNodes.has(l.source) && keepNodes.has(l.target))
+                .slice(0, maxLinks);
+
+            return { ...data, nodes: reducedNodes, links: reducedLinks };
+        }
+
+        function initGraph(data) {
+            Graph = ForceGraph3D()
+                (document.getElementById('graph-container'))
+                .graphData(data)
+                .nodeLabel(node => `
+                    <div style="background: rgba(0,0,0,0.8); padding: 5px; border: 1px solid #3366ff; border-radius: 4px;">
+                        <strong style="color: #00ccff;">${node.name}</strong><br>
+                        <small style="color: #aaa;">ID: ${node.id}</small><br>
+                        <small style="color: #667eea;">Connections: ${node.val}</small>
+                    </div>
+                `)
+                .linkLabel(link => `
+                    <div style="background: rgba(0,0,0,0.8); padding: 8px; border: 1px solid #ffcc00; border-radius: 4px; max-width: 250px;">
+                        <strong style="color: #ffcc00;">Interaction</strong><br>
+                        <small style="color: #eee;">${link.desc}</small><br>
+                        ${link.attention ? `<small style="color: #00ccff; font-weight: bold;">GAT Attention: ${(link.attention * 100).toFixed(1)}%</small>` : ''}
+                    </div>
+                `)
+                .nodeAutoColorBy('group')
+                .nodeVal(val => Math.pow(val.val, 0.4) * 2 * config.nodeSize)
+                .nodeOpacity(0.9)
+                .linkWidth(link => {
+                    // Thickness based on confidence + attention weight
+                    const baseWidth = link.confidence ? link.confidence * 2 : 1.2;
+                    const attBonus = link.attention ? link.attention * 15 : 0;
+                    return (baseWidth + attBonus) * 0.8;
+                })
+                .linkColor(link => {
+                    // Red = Major/High Attention, Orange = Moderate, Yellow = Minor
+                    if (link.severity) {
+                        const s = link.severity.toLowerCase();
+                        if (s === 'major' || s === 'high') return '#ff3333';
+                        if (s === 'moderate' || s === 'medium') return '#ff9933';
+                        if (s === 'minor' || s === 'low') return '#ffff33';
+                    }
+                    if (link.attention > 0.2) return '#ff3333';
+                    return '#444466';
+                })
+                .linkOpacity(config.linkOpacity)
+                .linkLineDash(link => {
+                    if (link.confidence && link.confidence < 0.7) return [2, 1];
+                    return null;
+                })
+                .linkDirectionalParticles(link => {
+                    // Keep particles sparse in fast mode to reduce GPU load.
+                    if (link.attention > 0.2) return 1;
+                    return 0;
+                })
+                .linkDirectionalParticleSpeed(link => (link.attention || 0.01) * 0.03)
+                .linkDirectionalParticleWidth(1)
+                .linkDirectionalArrowLength(0)
+                .linkDirectionalArrowRelPos(1)
+                .backgroundColor('#000005')
+                .onNodeClick(node => {
+                    const distance = 40;
+                    const distRatio = 1 + distance / Math.hypot(node.x, node.y, node.z);
+                    Graph.cameraPosition(
+                        { x: node.x * distRatio, y: node.y * distRatio, z: node.z * distRatio },
+                        node,
+                        3000
+                    );
+                });
+
+            // Adjust Physics for Stability
+            Graph.d3Force('link').distance(50);
+            Graph.d3Force('charge').strength(-70);
+            Graph.d3Force('center', d3.forceCenter());
+
+            // Warmup simulation
+            Graph.numDimensions(3);
+        }
+
+        // Fetch Data
+        // Check for scanned data first
+        const scanData = sessionStorage.getItem('scan_graph_data');
+        if (scanData) {
+            console.log("Loading scanned graph data...");
+            let data = JSON.parse(scanData);
+            data = trimGraphData(data, 1200, 6000);
+            document.getElementById('node-count').textContent = data.nodes.length;
+            document.getElementById('link-count').textContent = data.links.length;
+            document.getElementById('loading').style.display = 'none';
+            initGraph(data);
+
+            // Clear it so refresh gets full graph
+            sessionStorage.removeItem('scan_graph_data');
+        } else {
+            // Fetch Full Data
+            fetch('/api/graph/3d?limit=1200&max_links=6000&attention=0')
+                .then(res => res.json())
+                .then(data => {
+                    data = trimGraphData(data, 1200, 6000);
+                    document.getElementById('node-count').textContent = data.nodes.length;
+                    document.getElementById('link-count').textContent = data.links.length;
+                    document.getElementById('loading').style.display = 'none';
+                    initGraph(data);
+                })
+                .catch(err => {
+                    console.error(err);
+                    document.getElementById('loading').textContent = "Error loading graph data.";
+                    document.getElementById('loading').style.color = '#ff4444';
+                });
+        }
+
+        // Controls Logic
+        function updateGraphVisuals() {
+            if (!Graph) return;
+            Graph.nodeVal(val => Math.pow(val.val, 0.4) * 2 * config.nodeSize);
+            Graph.linkOpacity(config.linkOpacity);
+            // Re-trigger update
+            Graph.graphData(Graph.graphData());
+        }
+
+        function toggleRotation() {
+            isRotating = !isRotating;
+            const btn = document.getElementById('rotateBtn');
+            btn.textContent = isRotating ? "Pause Rotation" : "Resume Rotation";
+        }
+
+        // Camera Orbit
+        let angle = 0;
+        setInterval(() => {
+            if (isRotating && Graph) { // check if Graph exists
+                Graph.cameraPosition({
+                    x: 400 * Math.sin(angle),
+                    z: 400 * Math.cos(angle)
+                });
+                angle += 0.003;
+            }
+        }, 33);
+    </script>
+</body>
+
+</html>

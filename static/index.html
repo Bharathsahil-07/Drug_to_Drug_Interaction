@@ -1,0 +1,610 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Drug Interaction Checker - MT-GAT Powered</title>
+
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.23.0/cytoscape.min.js"></script>
+
+    <style>
+        :root {
+            --primary-color: #4CAF50;
+            --danger-color: #f44336;
+            --warning-color: #ff9800;
+            --info-color: #2196F3;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px 0;
+        }
+
+        .main-container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            margin: 20px auto;
+            max-width: 1200px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding-bottom: 20px;
+            border-bottom: 3px solid #667eea;
+        }
+
+        .header h1 {
+            color: #667eea;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .header .subtitle {
+            color: #666;
+            font-size: 1.1rem;
+        }
+
+        .badge-mtgat {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            margin: 5px;
+        }
+
+        .drug-search {
+            position: relative;
+            margin-bottom: 20px;
+        }
+
+        .drug-search input {
+            border-radius: 25px;
+            padding: 15px 20px;
+            font-size: 1.1rem;
+            border: 2px solid #667eea;
+        }
+
+        .drug-search input:focus {
+            box-shadow: 0 0 0 0.25rem rgba(102, 126, 234, 0.25);
+            border-color: #764ba2;
+        }
+
+        .drug-list {
+            max-height: 300px;
+            overflow-y: auto;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            background: #f9f9f9;
+        }
+
+        .drug-item {
+            padding: 12px 20px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .drug-item:hover {
+            background: #667eea;
+            color: white;
+        }
+
+        .drug-item:last-child {
+            border-bottom: none;
+        }
+
+        .selected-drugs {
+            background: #f0f4ff;
+            border-radius: 15px;
+            padding: 20px;
+            min-height: 120px;
+            border: 2px dashed #667eea;
+        }
+
+        .drug-tag {
+            display: inline-block;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 25px;
+            margin: 5px;
+            font-size: 1rem;
+            position: relative;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .drug-tag .remove-btn {
+            background: rgba(255, 255, 255, 0.3);
+            border: none;
+            color: white;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            margin-left: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .drug-tag .remove-btn:hover {
+            background: rgba(255, 255, 255, 0.5);
+            transform: scale(1.1);
+        }
+
+        .check-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            padding: 15px 40px;
+            font-size: 1.2rem;
+            border-radius: 30px;
+            color: white;
+            font-weight: bold;
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+            transition: all 0.3s;
+        }
+
+        .check-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.6);
+        }
+
+        .check-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .results-container {
+            margin-top: 30px;
+        }
+
+        .interaction-card {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 15px;
+            border-left: 5px solid;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .interaction-card.high-risk {
+            border-left-color: #f44336;
+            background: linear-gradient(to right, #ffebee 0%, white 10%);
+        }
+
+        .interaction-card.medium-risk {
+            border-left-color: #ff9800;
+            background: linear-gradient(to right, #fff3e0 0%, white 10%);
+        }
+
+        .interaction-card.low-risk {
+            border-left-color: #4caf50;
+            background: linear-gradient(to right, #e8f5e9 0%, white 10%);
+        }
+
+        .interaction-card.very-low-risk {
+            border-left-color: #2196f3;
+            background: linear-gradient(to right, #e3f2fd 0%, white 10%);
+        }
+
+        .risk-badge {
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 0.9rem;
+            display: inline-block;
+        }
+
+        .risk-badge.HIGH {
+            background: #f44336;
+            color: white;
+        }
+
+        .risk-badge.MEDIUM {
+            background: #ff9800;
+            color: white;
+        }
+
+        .risk-badge.LOW {
+            background: #4caf50;
+            color: white;
+        }
+
+        .risk-badge.VERY-LOW {
+            background: #2196f3;
+            color: white;
+        }
+
+        .probability-bar {
+            height: 10px;
+            background: #e0e0e0;
+            border-radius: 5px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+
+        .probability-fill {
+            height: 100%;
+            transition: width 0.5s ease-out;
+            border-radius: 5px;
+        }
+
+        .stats-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .stats-card h3 {
+            font-size: 2.5rem;
+            margin: 10px 0;
+        }
+
+        .stats-card p {
+            margin: 0;
+            opacity: 0.9;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .alert-custom {
+            border-radius: 15px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        .no-results {
+            text-align: center;
+            padding: 60px 20px;
+            color: #999;
+        }
+
+        .no-results i {
+            font-size: 4rem;
+            margin-bottom: 20px;
+        }
+
+        /* Visualization Container */
+        #cy {
+            width: 100%;
+            height: 400px;
+            border: 1px solid #ddd;
+            border-radius: 15px;
+            background: #fdfdfd;
+            margin-top: 20px;
+        }
+
+        .insights-card {
+            background: #fff;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .stat-box {
+            text-align: center;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            margin-bottom: 10px;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .severity-badge {
+            padding: 5px 10px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .severity-minor {
+            background: #e3f2fd;
+            color: #1565c0;
+        }
+
+        .severity-moderate {
+            background: #fff3e0;
+            color: #ef6c00;
+        }
+
+        .severity-major {
+            background: #ffebee;
+            color: #c62828;
+        }
+
+        .explanation-panel {
+            background: #fdfdfd;
+            border: 1px solid #e0e0e0;
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 15px;
+            display: none;
+            animation: expandDown 0.3s ease-out;
+            box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.05);
+        }
+
+        @keyframes expandDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+                max-height: 0;
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+                max-height: 1000px;
+            }
+        }
+
+        .why-link {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: bold;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: color 0.2s;
+            display: inline-flex;
+            align-items: center;
+        }
+
+        .why-link:hover {
+            color: #764ba2;
+            text-decoration: underline;
+        }
+
+        .neighbor-bar {
+            height: 8px;
+            background: #eee;
+            border-radius: 4px;
+            margin-bottom: 12px;
+            position: relative;
+        }
+
+        .neighbor-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            border-radius: 4px;
+            transition: width 1s ease-out;
+        }
+
+        .explanation-header {
+            color: #764ba2;
+            font-weight: bold;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 15px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 5px;
+        }
+
+        /* Enhanced Graph Overlay */
+        .graph-overlay {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 15px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            max-width: 300px;
+            z-index: 100;
+            display: none;
+            border: 1px solid #667eea;
+            font-size: 0.85rem;
+            pointer-events: none;
+        }
+
+        .graph-explanation-card {
+            background: #f8f9ff;
+            border-radius: 12px;
+            padding: 15px;
+            border-left: 4px solid #667eea;
+            margin-top: 20px;
+            display: none;
+            animation: fadeIn 0.3s ease-in;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="main-container">
+            <!-- Navigation Menu -->
+            <nav class="navbar navbar-expand-lg navbar-light bg-light mb-4 rounded">
+                <div class="container-fluid">
+                    <a class="navbar-brand" href="#"><i class="fas fa-pills"></i> Drug Checker</a>
+                    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                        <span class="navbar-toggler-icon"></span>
+                    </button>
+                    <div class="collapse navbar-collapse" id="navbarNav">
+                        <ul class="navbar-nav">
+                            <li class="nav-item">
+                                <a class="nav-link active" href="#">Home</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="/static/dashboard.html">
+                                    <i class="fas fa-chart-line"></i> Analytics Dashboard
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="/static/graph3d.html">
+                                    <i class="fas fa-cube"></i> 3D Graph
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="/static/scan.html">
+                                    <i class="fas fa-camera"></i> Scan Medicine
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </nav>
+
+            <!-- Header -->
+            <div class="header">
+                <h1><i class="fas fa-pills"></i> Drug Interaction Checker</h1>
+                <p class="subtitle">Powered by Multi-Task Graph Attention Networks (GAT)</p>
+            </div>
+
+            <!-- Insights Panel -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="insights-card">
+                        <h5 class="mb-3"><i class="fas fa-brain me-2"></i>AI Model Insights</h5>
+                        <div class="row" id="insights-stats">    
+                        <div class="mt-3">
+                            <h6><i class="fas fa-history me-2"></i>Real-time Activity Log</h6>
+                            <ul class="list-group list-group-flush fs-6 small" id="activity-log"
+                                style="max-height: 150px; overflow-y: auto;">
+                                <!-- Log items -->
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Content -->
+            <div class="row">
+                <!-- Drug Selection -->
+                <div class="col-md-5">
+                    <div class="card border-0 shadow-sm mb-4">
+                        <div class="card-body">
+                            <h4><i class="fas fa-search"></i> Search Drugs</h4>
+                            <div class="drug-search">
+                                <input type="text" id="drugSearch" class="form-control"
+                                    placeholder="Type drug name (e.g., Aspirin)..." autocomplete="off">
+                                <div id="drugResults" class="drug-list" style="display: none;"></div>
+                            </div>
+
+                            <h4 class="mt-4"><i class="fas fa-clipboard-check"></i> Selected Drugs</h4>
+                            <div id="selectedDrugs" class="selected-drugs">
+                                <p class="text-muted text-center" style="margin: 40px 0;">
+                                    <i class="fas fa-hand-pointer fa-2x"></i><br>
+                                    Select at least 2 drugs
+                                </p>
+                            </div>
+
+                            <div class="text-center mt-3">
+                                <button id="checkBtn" class="check-btn w-100" disabled>
+                                    <i class="fas fa-search-plus"></i> Check Interactions
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Visualization & Results -->
+                <div class="col-md-7">
+                    <!-- Graph -->
+                    <div class="card border-0 shadow-sm mb-4">
+                        <div class="card-body">
+                            <h5 class="card-title"><i class="fas fa-project-diagram"></i> Interactive Knowledge Graph</h5>
+                            <div class="position-relative">
+                                <div id="cy"></div>
+                                <div id="graphTooltip" class="graph-overlay"></div>
+                            </div>
+                            <div id="graphExplanation" class="graph-explanation-card">
+                                <strong><i class="fas fa-info-circle"></i> Graph Insight:</strong>
+                                <p id="graphExplanationText" class="mb-0 small text-muted">Click on an edge to see the interaction mechanism.</p>
+                            </div>
+                            <div class="text-center mt-2 small text-muted">
+                                <span class="me-3"><i class="fas fa-circle" style="color: #667eea;"></i> Target Drug</span>
+                                <span class="me-3"><i class="fas fa-circle" style="color: #a5a5a5;"></i> Knowledge Neighbor</span>
+                                <span class="me-3"><i class="fas fa-minus" style="color: #d32f2f;"></i> Major Risk</span>
+                                <span><i class="fas fa-minus" style="color: #4caf50;"></i> Low Risk</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- List Results -->
+                    <h4><i class="fas fa-exclamation-triangle"></i> Detailed Results</h4>
+                    <div id="resultsContainer" class="results-container">
+                        <div class="no-results">
+                            <i class="fas fa-flask"></i>
+                            <h5>No interactions checked yet</h5>
+                            <p>Select drugs and click "Check Interactions" to see results</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script src="/static/app.js"></script>
+</body>
+
+</html>
+

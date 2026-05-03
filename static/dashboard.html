@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Drug Interaction Checker</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0"></script>
+    
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px 0;
+        }
+        
+        .dashboard-container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 40px;
+            margin: 20px auto;
+            max-width: 1400px;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding-bottom: 20px;
+            border-bottom: 3px solid #667eea;
+        }
+        
+        .header h1 {
+            color: #667eea;
+            font-weight: bold;
+        }
+        
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 15px;
+            padding: 25px;
+            text-align: center;
+            margin-bottom: 20px;
+            transition: transform 0.3s ease;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        
+        .stat-label {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+        
+        .activity-log {
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #e0e0e0;
+            border-radius: 10px;
+            padding: 15px;
+        }
+        
+        .activity-item {
+            padding: 10px;
+            margin: 5px 0;
+            background: #f9f9f9;
+            border-left: 4px solid #667eea;
+            border-radius: 5px;
+            font-size: 0.9rem;
+        }
+        
+        .activity-search {
+            border-left-color: #4caf50;
+        }
+        
+        .activity-check {
+            border-left-color: #ff9800;
+        }
+            transition: transform 0.3s;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .stat-card h2 {
+            font-size: 3rem;
+            margin: 10px 0;
+        }
+        
+        .chart-container {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .table-container {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .risk-badge {
+            padding: 5px 10px;
+            border-radius: 10px;
+            font-weight: bold;
+            font-size: 0.8rem;
+        }
+        
+        .risk-badge.HIGH { background: #f44336; color: white; }
+        .risk-badge.MEDIUM { background: #ff9800; color: white; }
+        .risk-badge.LOW { background: #4caf50; color: white; }
+        
+        .nav-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 20px;
+            margin: 5px;
+            transition: all 0.3s;
+        }
+        
+        .nav-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="dashboard-container">
+            <div class="header">
+                <h1><i class="fas fa-chart-line"></i> Analytics Dashboard</h1>
+                <p class="text-muted">Comprehensive Drug Interaction Statistics</p>
+                <div class="mt-3">
+                    <a href="/" class="nav-btn"><i class="fas fa-home"></i> Home</a>
+                    <button onclick="exportDashboard()" class="nav-btn"><i class="fas fa-download"></i> Export Data</button>
+                </div>
+            </div>
+            
+            <!-- Statistics Cards -->
+            <div class="row mb-4">
+                <div class="col-md-3">
+                    <div class="stat-card">
+                        <i class="fas fa-pills fa-2x"></i>
+                        <h2 id="totalDrugs">0</h2>
+                        <p>Total Drugs</p>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-card">
+                        <i class="fas fa-exclamation-triangle fa-2x"></i>
+                        <h2 id="totalInteractions">0</h2>
+                        <p>Known Interactions</p>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-card">
+                        <i class="fas fa-brain fa-2x"></i>
+                        <h2 id="modelAUC">92.2%</h2>
+                        <p>Model AUC Score</p>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-card">
+                        <i class="fas fa-search fa-2x"></i>
+                        <h2 id="totalSearches">0</h2>
+                        <p>Searches Today</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Charts Row -->
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="chart-container">
+                        <h4><i class="fas fa-chart-pie"></i> Interaction Distribution</h4>
+                        <canvas id="distributionChart"></canvas>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="chart-container">
+                        <h4><i class="fas fa-chart-bar"></i> Risk Level Statistics</h4>
+                        <canvas id="riskChart"></canvas>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Model Performance -->
+            <div class="row mt-4">
+                <div class="col-md-12">
+                    <div class="table-container">
+                        <h4><i class="fas fa-cogs"></i> Model Performance Metrics</h4>
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Metric</th>
+                                    <th>Value</th>
+                                    <th>Description</th>
+                                </tr>
+                            </thead>
+                            <tbody id="metricsTable">
+                                <tr><td colspan="3" class="text-center">Loading...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Top Dangerous Combinations -->
+            <div class="row mt-4">
+                <div class="col-md-8">
+                    <div class="table-container">
+                        <h4><i class="fas fa-skull-crossbones"></i> Top Dangerous Drug Combinations</h4>
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Drug 1</th>
+                                    <th>Drug 2</th>
+                                    <th>Severity</th>
+                                </tr>
+                            </thead>
+                            <tbody id="dangerousTable">
+                                <tr><td colspan="4" class="text-center">Loading...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <!-- Real-Time Activity Log -->
+                <div class="col-md-4">
+                    <div class="table-container">
+                        <h4><i class="fas fa-clock"></i> Real-Time Activity (LIVE)</h4>
+                        <div class="activity-log" id="activityLog">
+                            <p class="text-muted text-center">Waiting for user activities...</p>
+                        </div>
+                        <small class="text-muted d-block mt-2">Last updated: <span id="lastUpdate">now</span></small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const API_URL = window.location.origin;
+        
+        let distributionChart, riskChart;
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            loadDashboardData();
+        });
+        
+        async function loadDashboardData() {
+            try {
+                const response = await fetch(`${API_URL}/api/dashboard/stats`);
+                const data = await response.json();
+                
+                // Update statistics cards
+                document.getElementById('totalDrugs').textContent = data.overview.total_drugs.toLocaleString();
+                document.getElementById('totalInteractions').textContent = data.overview.total_interactions.toLocaleString();
+                document.getElementById('modelAUC').textContent = (data.overview.model_accuracy * 100).toFixed(1) + '%';
+                document.getElementById('totalSearches').textContent = data.overview.total_searches_today || 0;
+                
+                // Create charts
+                createDistributionChart(data.interaction_distribution);
+                createRiskChart(data.interaction_distribution);
+                
+                // Load model metrics
+                loadModelMetrics(data.model_performance);
+                
+                // Load dangerous combinations
+                loadDangerousCombinations(data.top_dangerous_combinations);
+                
+            } catch (error) {
+                console.error('Error loading dashboard:', error);
+            }
+        }
+        
+        function createDistributionChart(data) {
+            const ctx = document.getElementById('distributionChart').getContext('2d');
+            distributionChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Severe', 'Major', 'Moderate', 'Minor'],
+                    datasets: [{
+                        data: [data.severe, data.major, data.moderate, data.minor],
+                        backgroundColor: ['#d32f2f', '#f44336', '#ff9800', '#4caf50']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: { position: 'bottom' }
+                    }
+                }
+            });
+        }
+        
+        function createRiskChart(data) {
+            const ctx = document.getElementById('riskChart').getContext('2d');
+            riskChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Severe', 'Major', 'Moderate', 'Minor'],
+                    datasets: [{
+                        label: 'Number of Interactions',
+                        data: [data.severe, data.major, data.moderate, data.minor],
+                        backgroundColor: ['#d32f2f', '#f44336', '#ff9800', '#4caf50']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: { beginAtZero: true }
+                    }
+                }
+            });
+        }
+        
+        async function loadModelMetrics(metrics) {
+            const tbody = document.getElementById('metricsTable');
+            tbody.innerHTML = `
+                <tr>
+                    <td><strong>AUC Score</strong></td>
+                    <td><span class="badge bg-success">${(metrics.auc_score * 100).toFixed(2)}%</span></td>
+                    <td>Area Under ROC Curve</td>
+                </tr>
+                <tr>
+                    <td><strong>Sensitivity</strong></td>
+                    <td><span class="badge bg-info">${(metrics.sensitivity * 100).toFixed(2)}%</span></td>
+                    <td>True Positive Rate</td>
+                </tr>
+                <tr>
+                    <td><strong>Specificity</strong></td>
+                    <td><span class="badge bg-primary">${(metrics.specificity * 100).toFixed(2)}%</span></td>
+                    <td>True Negative Rate</td>
+                </tr>
+                <tr>
+                    <td><strong>Parameters</strong></td>
+                    <td><span class="badge bg-secondary">${metrics.total_parameters.toLocaleString()}</span></td>
+                    <td>Total Model Parameters</td>
+                </tr>
+            `;
+        }
+        
+        function loadDangerousCombinations(combinations) {
+            const tbody = document.getElementById('dangerousTable');
+            
+            if (combinations.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" class="text-center">No data available</td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = combinations.map((combo, idx) => `
+                <tr>
+                    <td>${idx + 1}</td>
+                    <td><i class="fas fa-pills"></i> ${combo.drug1}</td>
+                    <td><i class="fas fa-pills"></i> ${combo.drug2}</td>
+                    <td><span class="risk-badge ${combo.severity}">${combo.severity}</span></td>
+                </tr>
+            `).join('');
+            
+            // Load real-time activities
+            loadRecentActivities();
+        }
+        
+        async function loadRecentActivities() {
+            try {
+                const response = await fetch(`${API_URL}/api/search/history`);
+                const data = await response.json();
+                
+                const historyData = data;
+                const activityLog = document.getElementById('activityLog');
+                const activities = historyData.history.slice(-10).reverse();
+                
+                if (activities.length === 0) {
+                    activityLog.innerHTML = '<p class="text-muted text-center">No activities recorded yet</p>';
+                    return;
+                }
+                
+                activityLog.innerHTML = activities.map(activity => {
+                    let icon = '';
+                    let text = '';
+                    let className = '';
+                    
+                    if (activity.type === 'search') {
+                        icon = '<i class="fas fa-search" style="color: #4caf50;"></i>';
+                        text = `Searched: "${activity.query}" (${activity.results_found} found)`;
+                        className = 'activity-search';
+                    } else if (activity.type === 'interaction_check') {
+                        icon = '<i class="fas fa-flask" style="color: #ff9800;"></i>';
+                        text = `Checked: ${activity.drug1} + ${activity.drug2}`;
+                        className = 'activity-check';
+                    }
+                    
+                    const time = new Date(activity.timestamp).toLocaleTimeString();
+                    return `<div class="activity-item ${className}">
+                        ${icon} ${text}
+                        <br><small class="text-muted">${time}</small>
+                    </div>`;
+                }).join('');
+                
+                document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString();
+            } catch (error) {
+                console.error('Error loading activities:', error);
+            }
+        }
+        
+        // Auto-refresh dashboard every 3 seconds
+        setInterval(() => {
+            loadDashboardData();
+        }, 3000);
+        
+        function exportDashboard() {
+            const data = {
+                timestamp: new Date().toISOString(),
+                dashboard_data: 'Exported from Analytics Dashboard'
+            };
+            
+            const dataStr = JSON.stringify(data, null, 2);
+            const dataBlob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(dataBlob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `dashboard_export_${Date.now()}.json`;
+            link.click();
+        }
+    </script>
+                </tr>
+            `).join('');
+        }
+        
+        function exportDashboard() {
+            alert('Dashboard export feature - would generate PDF/CSV with all statistics');
+        }
+    </script>
+</body>
+</html>

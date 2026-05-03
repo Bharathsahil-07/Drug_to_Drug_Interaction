@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scan Medicine - AI Drug Interaction Checker</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #667eea;
+            --secondary-color: #764ba2;
+            --accent-color: #00d2ff;
+            --bg-dark: #0f172a;
+        }
+
+        body {
+            background-color: #f8f9fa;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            color: #334155;
+        }
+
+        .main-container {
+            max-width: 1000px;
+            margin: 40px auto;
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-weight: 800;
+        }
+
+        .upload-area {
+            border: 2px dashed #cbd5e1;
+            padding: 60px;
+            border-radius: 16px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: #f1f5f9;
+        }
+
+        .upload-area:hover,
+        .upload-area.drag-over {
+            border-color: var(--primary-color);
+            background: #eef2ff;
+        }
+
+        .upload-area i {
+            font-size: 3rem;
+            color: var(--primary-color);
+            margin-bottom: 20px;
+        }
+
+        #preview-container {
+            display: none;
+            margin-top: 30px;
+            text-align: center;
+        }
+
+        #image-preview {
+            max-width: 100%;
+            max-height: 400px;
+            border-radius: 12px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .loading-overlay {
+            display: none;
+            margin-top: 20px;
+        }
+
+        .result-card {
+            display: none;
+            margin-top: 40px;
+            border-radius: 16px;
+            overflow: hidden;
+            border: none;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        }
+
+        .result-header {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .interaction-item {
+            padding: 15px;
+            border-bottom: 1px solid #f1f5f9;
+            transition: background 0.2s;
+        }
+
+        .interaction-item:hover {
+            background: #f8fafc;
+        }
+
+        .severity-badge {
+            font-size: 0.75rem;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .severity-major {
+            background: #fee2e2;
+            color: #dc2626;
+        }
+
+        .severity-moderate {
+            background: #fef3c7;
+            color: #d97706;
+        }
+
+        .severity-minor {
+            background: #dcfce7;
+            color: #16a34a;
+        }
+
+        .btn-view-graph {
+            background: var(--bg-dark);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 30px;
+            font-weight: 600;
+            transition: all 0.3s;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn-view-graph:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+            color: white;
+        }
+
+        #detected-text-debug {
+            font-size: 0.8rem;
+            color: #64748b;
+            background: #f8fafc;
+            padding: 10px;
+            border-radius: 8px;
+            margin-top: 20px;
+            max-height: 100px;
+            overflow-y: auto;
+        }
+
+        .explanation-panel {
+            background: #fdfdfd;
+            border: 1px solid #e0e0e0;
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 15px;
+            display: none;
+            animation: expandDown 0.3s ease-out;
+            box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.05);
+        }
+
+        @keyframes expandDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+                max-height: 0;
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+                max-height: 1000px;
+            }
+        }
+
+        .why-link {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: bold;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: color 0.2s;
+            display: inline-flex;
+            align-items: center;
+        }
+
+        .why-link:hover {
+            color: #764ba2;
+            text-decoration: underline;
+        }
+
+        .neighbor-bar {
+            height: 8px;
+            background: #eee;
+            border-radius: 4px;
+            margin-bottom: 12px;
+            position: relative;
+        }
+
+        .neighbor-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            border-radius: 4px;
+            transition: width 1s ease-out;
+        }
+
+        .explanation-header {
+            color: #764ba2;
+            font-weight: bold;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 15px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 5px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="main-container">
+            <!-- Navigation -->
+            <nav class="mb-4">
+                <a href="/static/index.html" class="text-decoration-none text-muted">
+                    <i class="fas fa-arrow-left me-2"></i> Back to Dashboard
+                </a>
+            </nav>
+
+            <div class="header">
+                <h1><i class="fas fa-camera me-2"></i>Scan Medicine</h1>
+                <p class="text-muted">Upload a photo of your medicine box or blister pack for AI detection</p>
+            </div>
+
+            <!-- Upload Component -->
+            <div id="upload-section">
+                <div class="upload-area" id="drop-zone">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                    <h3>Drop image here</h3>
+                    <p class="text-muted">or click to browse files (Select multiple if needed)</p>
+                    <input type="file" id="file-input" hidden accept="image/*" multiple>
+                </div>
+            </div>
+
+            <!-- Preview & Loading -->
+            <div id="preview-container">
+                <div id="image-previews" class="d-flex flex-wrap justify-content-center gap-2 mb-3">
+                    <!-- Multiple previews will go here -->
+                </div>
+                <div class="loading-overlay" id="loading">
+                    <div class="spinner-border text-primary mt-3" role="status"></div>
+                    <p class="mt-2 fw-bold text-primary">AI is analyzing the images...</p>
+                </div>
+                <div class="mt-4">
+                    <button class="btn btn-outline-secondary" id="reset-btn">
+                        <i class="fas fa-sync me-2"></i> New Scan
+                    </button>
+                </div>
+            </div>
+
+            <!-- Results -->
+            <div class="result-card" id="result-card">
+                <div class="result-header">
+                    <h2 id="detected-drug-name">Drugs Detected</h2>
+                    <div class="badge bg-light text-dark">
+                        Max Match Confidence: <span id="match-confidence">0%</span>
+                    </div>
+                </div>
+                <div class="p-4">
+                    <div id="detected-list-container" class="mb-4">
+                        <h6><i class="fas fa-pills me-2"></i>Medicines Found:</h6>
+                        <div id="detected-drugs-badges" class="d-flex flex-wrap gap-2"></div>
+                    </div>
+
+                    <h5 class="mb-4"><i class="fas fa-exclamation-triangle me-2 text-warning"></i>Predicted Interactions
+                    </h5>
+                    <div id="interactions-list">
+                        <!-- Items injected by JS -->
+                    </div>
+
+                    <div class="text-center mt-5">
+                        <a href="/static/graph3d.html" class="btn-view-graph" id="view-graph-btn">
+                            <i class="fas fa-cube me-2"></i> View Interaction Graph
+                        </a>
+                    </div>
+
+                    <div id="detected-text-debug">
+                        <strong>Raw OCR Text Fragment:</strong> <span id="raw-ocr-text"></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Error Message -->
+            <div class="alert alert-danger mt-4" id="error-alert" style="display: none;">
+                <i class="fas fa-times-circle me-2"></i> <span id="error-message"></span>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const dropZone = document.getElementById('drop-zone');
+        const fileInput = document.getElementById('file-input');
+        const previewContainer = document.getElementById('preview-container');
+        const imagePreviews = document.getElementById('image-previews');
+        const loading = document.getElementById('loading');
+        const resultCard = document.getElementById('result-card');
+        const errorAlert = document.getElementById('error-alert');
+        const resetBtn = document.getElementById('reset-btn');
+
+        // Event Listeners
+        dropZone.onclick = () => fileInput.click();
+
+        fileInput.onchange = (e) => {
+            if (e.target.files.length > 0) handleUpload(e.target.files);
+        };
+
+        dropZone.ondragover = (e) => {
+            e.preventDefault();
+            dropZone.classList.add('drag-over');
+        };
+
+        dropZone.ondragleave = () => dropZone.classList.remove('drag-over');
+
+        dropZone.ondrop = (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('drag-over');
+            if (e.dataTransfer.files.length > 0) handleUpload(e.dataTransfer.files);
+        };
+
+        resetBtn.onclick = () => {
+            location.reload();
+        };
+
+        async function handleUpload(files) {
+            // Show previews
+            imagePreviews.innerHTML = '';
+            for (let file of files) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const img = document.createElement('img');
+                    img.src = e.target.result;
+                    img.className = 'img-thumbnail';
+                    img.style.maxHeight = '150px';
+                    imagePreviews.appendChild(img);
+                };
+                reader.readAsDataURL(file);
+            }
+
+            previewContainer.style.display = 'block';
+            document.getElementById('upload-section').style.display = 'none';
+
+            // Hide previous results
+            resultCard.style.display = 'none';
+            errorAlert.style.display = 'none';
+            loading.style.display = 'block';
+
+            // Prepare FormData
+            const formData = new FormData();
+            for (let file of files) {
+                formData.append('image', file);
+            }
+
+            try {
+                const response = await fetch('/api/scan-drug-image', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (data.error) throw new Error(data.error);
+
+                displayResults(data);
+            } catch (err) {
+                document.getElementById('error-message').innerText = err.message;
+                errorAlert.style.display = 'block';
+            } finally {
+                loading.style.display = 'none';
+            }
+        }
+
+        function displayResults(data) {
+            if (!data.detected_drugs || data.detected_drugs.length === 0) {
+                document.getElementById('error-message').innerText = "No drugs detected. Please try clearer images of labels.";
+                errorAlert.style.display = 'block';
+                return;
+            }
+
+            // Update badges with detailed tooltips
+            const badges = document.getElementById('detected-drugs-badges');
+            badges.innerHTML = '';
+            (data.detection_details || []).forEach(detail => {
+                const confidenceColor = detail.confidence > 0.8 ? 'bg-primary' : (detail.confidence > 0.6 ? 'bg-info' : 'bg-warning');
+                badges.innerHTML += `
+                    <div class="card mb-2 me-2 border-0 shadow-sm" style="max-width: 250px; background: #fff; border-left: 4px solid var(--primary-color) !important;">
+                        <div class="card-body p-2">
+                            <h6 class="mb-1 fw-bold text-primary">${detail.name}</h6>
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <span class="badge ${confidenceColor}">${(detail.confidence * 100).toFixed(0)}% Match</span>
+                                <small class="text-muted x-small">${detail.reason}</small>
+                            </div>
+                            <small class="text-muted d-block x-small border-top pt-1 mt-1" style="font-style: italic;">
+                                Found near: "${detail.original_text}"
+                            </small>
+                        </div>
+                    </div>
+                `;
+            });
+
+            document.getElementById('match-confidence').innerText = (data.match_confidence * 100).toFixed(1) + '%';
+            document.getElementById('raw-ocr-text').innerText = data.raw_text.substring(0, 300) + '...';
+
+            const list = document.getElementById('interactions-list');
+            list.innerHTML = '';
+
+            if (data.interactions.length === 0) {
+                list.innerHTML = `
+                    <div class="text-center p-4 text-muted border rounded">
+                        <i class="fas fa-check-circle text-success fs-3 mb-2"></i><br>
+                        No significant interactions detected between the identified medicines.
+                    </div>
+                `;
+            } else {
+                // Group by type
+                const detectedPairs = data.interactions.filter(i => i.type === 'Detected Pair');
+                const suggested = data.interactions.filter(i => i.type === 'Suggested Interaction');
+
+                if (detectedPairs.length > 0) {
+                    list.innerHTML += `<h6 class="text-danger fw-bold mb-3 mt-2"><i class="fas fa-exclamation-circle me-2"></i>Matched Pair Risks:</h6>`;
+                    detectedPairs.forEach((item, idx) => {
+                        list.innerHTML += renderInteractionItem(item, `detected-${idx}`);
+                    });
+                }
+
+                if (suggested.length > 0) {
+                    list.innerHTML += `<h6 class="text-info fw-bold mb-3 mt-4"><i class="fas fa-lightbulb me-2"></i>Suggested Interaction Risks:</h6>`;
+                    suggested.forEach((item, idx) => {
+                        list.innerHTML += renderInteractionItem(item, `suggested-${idx}`);
+                    });
+                }
+            }
+
+            // Store graph data for 3D page
+            if (data.graph_data) {
+                sessionStorage.setItem('scan_graph_data', JSON.stringify(data.graph_data));
+            }
+
+            resultCard.style.display = 'block';
+        }
+
+        function renderInteractionItem(item, id_suffix) {
+            const severityClass = `severity-${item.severity.toLowerCase()}`;
+            const id = `explanation-${id_suffix}`;
+
+            // Build Explanation Content
+            let explanationHtml = '';
+            if (item.clinical_explanation || item.model_explanation) {
+                const clin = item.clinical_explanation || {};
+                const mod = item.model_explanation || {};
+                const feats = item.feature_contributions || {};
+                const normalizeFeature = (value) => {
+                    const num = Number(value);
+                    if (!Number.isFinite(num)) return 0;
+                    return Math.min(1, Math.max(0, num));
+                };
+                const chemicalSimilarity = normalizeFeature(feats.chemical_similarity);
+                const targetOverlap = normalizeFeature(feats.target_overlap);
+
+                explanationHtml = `
+                <div id="${id}" class="explanation-panel mt-3">
+                    <div class="row g-3">
+                        <div class="col-12 mb-2 p-2 bg-light rounded border">
+                            <h6 class="fw-bold text-primary mb-1 small"><i class="fas fa-chart-line me-1"></i> 1. Risk Summary</h6>
+                            <p class="x-small mb-0"><strong>Calibrated Probability:</strong> ${(item.probability * 100).toFixed(1)}%</p>
+                            <p class="x-small text-muted mt-1 mb-0">${clin.risk_summary || 'Analysis indicates potential for pharmacologic interference.'}</p>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="explanation-header text-success small mb-1"><i class="fas fa-stethoscope me-1"></i> 2. Clinical Mechanism</div>
+                            <div class="p-2 border rounded bg-white x-small">
+                                <p class="mb-1"><strong>Pathway:</strong> ${clin.mechanism || 'Pharmacologic interaction path'}</p>
+                                <p class="mb-0">${clin.clinical_reason || 'Monitored co-administration recommended.'}</p>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="explanation-header text-info small mb-1"><i class="fas fa-fingerprint me-1"></i> 3. Feature Breakdown</div>
+                            <div class="p-2 border rounded bg-white x-small">
+                                <div class="mb-1">
+                                    <div class="d-flex justify-content-between mb-0"><span>Chemical</span><span>${(chemicalSimilarity * 100).toFixed(0)}%</span></div>
+                                    <div class="progress" style="height: 4px;"><div class="progress-bar bg-info" style="width: ${chemicalSimilarity * 100}%"></div></div>
+                                </div>
+                                <div class="mb-0">
+                                    <div class="d-flex justify-content-between mb-0"><span>Target</span><span>${(targetOverlap * 100).toFixed(0)}%</span></div>
+                                    <div class="progress" style="height: 4px;"><div class="progress-bar bg-primary" style="width: ${targetOverlap * 100}%"></div></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-12">
+                            <div class="explanation-header text-purple small mb-1"><i class="fas fa-brain me-1"></i> 4. AI Insight</div>
+                            <div class="p-2 border rounded bg-white x-small">
+                                <p class="mb-1 font-italic">${mod.confidence_reasoning || 'Derived from graph neural context.'}</p>
+                                <div class="d-flex flex-wrap gap-1">
+                                    ${(mod.top_influencing_neighbors || []).slice(0, 3).map(n => `
+                                        <span class="badge bg-light text-dark border">${n.drug} (${n.relative_influence}%)</span>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        </div>
+                `;
+            }
+
+            return `
+                <div class="interaction-item shadow-sm border p-3 rounded mb-3 bg-white">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h6 class="mb-0 fw-bold">
+                            <span class="text-primary">${item.source_drug}</span> + 
+                            <span class="text-dark">${item.name}</span>
+                        </h6>
+                        <span class="severity-badge ${severityClass}">${item.severity}</span>
+                    </div>
+                    <p class="small text-muted mb-2">${item.mechanism}</p>
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="progress flex-grow-1" style="height: 6px;">
+                            <div class="progress-bar bg-info" role="progressbar" style="width: ${item.confidence * 100}%"></div>
+                        </div>
+                        <span class="x-small text-muted">${(item.confidence * 100).toFixed(0)}%</span>
+                        ${item.clinical_explanation || item.model_explanation ? `
+                            <a class="why-link" onclick="toggleExplanation('${id}')">
+                                <i class="fas fa-question-circle me-1"></i> Why?
+                            </a>
+                        ` : ''}
+                    </div>
+                    ${explanationHtml}
+                </div>
+            `;
+        }
+
+        window.toggleExplanation = function (id) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            el.style.display = (el.style.display === 'block') ? 'none' : 'block';
+        }
+    </script>
+</body>
+
+</html>
