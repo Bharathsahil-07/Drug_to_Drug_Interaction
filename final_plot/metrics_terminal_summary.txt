@@ -1,0 +1,4 @@
+REAL METRICS SUMMARY
+====================
+Cold-Start AUC (10-seed mean): 0.9390
+Transductive Test AUC: 0.9861

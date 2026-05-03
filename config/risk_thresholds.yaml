@@ -1,0 +1,15 @@
+thresholds:
+  no_significant_risk: 0.30
+  low_risk: 0.60
+  moderate_risk: 0.80
+  high_risk: 1.00
+
+labels:
+  no_significant_risk: "No Significant Risk"
+  low_risk: "Low Risk"
+  moderate_risk: "Moderate Risk"
+  high_risk: "High Risk"
+
+descriptions:
+  tooltip: "Risk levels are derived from calibrated probability thresholds."
+  disclaimer: "This prediction is AI-generated using graph-based modeling of DrugBank data and should not replace professional medical judgment."

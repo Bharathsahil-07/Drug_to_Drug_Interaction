@@ -1,0 +1,15 @@
+Warning: RDKit not found. Chemical features will be skipped.
+
+============================================================
+           DRUG INTERACTION CHECKER - API SERVER            
+============================================================
+
+(*) Loading model and data...
+[OK] Enriched drug data loaded
+(*) Loading interactions database (large file)...
+[OK] Interactions database loaded: 1455276 rows
+Loading model from: data/trained_model_v2.pt
+Checkpoint type: <class 'dict'>
+Initializing V2 Model with config: {'hidden_dim': 128, 'embedding_dim': 64, 'heads': 4}
+[OK] Model loaded successfully from data/trained_model_v2.pt
+[OK] Graph data loaded from drug_graph_v2.pt

@@ -1,0 +1,31 @@
+# Drug Interaction Project Requirements
+
+# Core dependencies
+torch>=2.0.0
+torch-geometric>=2.3.0
+pandas>=2.0.0
+numpy>=1.24.0
+scikit-learn>=1.3.0
+
+# Data processing
+tqdm>=4.65.0
+lxml>=4.9.0
+
+# Visualization
+matplotlib>=3.7.0
+seaborn>=0.12.0
+networkx>=3.1
+plotly>=5.14.0
+
+# Web framework (for API)
+flask>=2.3.0
+flask-cors>=4.0.0
+flask>=2.3.0
+flask-cors>=4.0.0
+
+# Database (optional)
+psycopg2-binary>=2.9.0
+sqlalchemy>=2.0.0
+
+# Utilities
+python-dotenv>=1.0.0

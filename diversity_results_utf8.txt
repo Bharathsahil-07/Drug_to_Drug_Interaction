@@ -1,0 +1,60 @@
+﻿================================================================================
+CHEMICAL DIVERSITY ANALYSIS (Jaccard Similarity on Morgan Fingerprints)
+================================================================================
+Loaded saved rigorous model weights.
+Partitioning test edges into diversity bins...
+python : Traceback (most recent call last):
+At line:1 char:1
++ python diversity_analysis.py > diversity_results.txt 2>&1
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Traceback (most recent call last)::String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  File "C:\Users\navas\Downloads\sdp2\Sdp\drug_interaction_project\diversity_analysis.py", line 113, in <module>
+    run_diversity_analysis()
+  File "C:\Users\navas\Downloads\sdp2\Sdp\drug_interaction_project\diversity_analysis.py", line 87, in 
+run_diversity_analysis
+    logits, _, _ = model(graph_data.x, graph_data.edge_index, edge_idx_tensor)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\navas\anaconda3\Lib\site-packages\torch\nn\modules\module.py", line 1776, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\navas\anaconda3\Lib\site-packages\torch\nn\modules\module.py", line 1787, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\navas\Downloads\sdp2\Sdp\drug_interaction_project\gcn_model.py", line 118, in forward
+    z = self.encode(x, edge_index)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\navas\Downloads\sdp2\Sdp\drug_interaction_project\gcn_model.py", line 62, in encode
+    x = self.conv1(x, edge_index)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\navas\anaconda3\Lib\site-packages\torch\nn\modules\module.py", line 1776, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\navas\anaconda3\Lib\site-packages\torch\nn\modules\module.py", line 1787, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\navas\anaconda3\Lib\site-packages\torch_geometric\nn\conv\gat_conv.py", line 366, in forward
+    out = self.propagate(edge_index, x=x, alpha=alpha, size=size)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\navas\AppData\Local\Temp\torch_geometric.nn.conv.gat_conv_GATConv_propagate_2uodjgck.py", line 150, 
+in propagate
+    kwargs = self.collect(
+             ^^^^^^^^^^^^^
+  File "C:\Users\navas\AppData\Local\Temp\torch_geometric.nn.conv.gat_conv_GATConv_propagate_2uodjgck.py", line 85, in 
+collect
+    x_j = self._index_select(_x_0, edge_index_j)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\navas\anaconda3\Lib\site-packages\torch_geometric\nn\conv\message_passing.py", line 267, in 
+_index_select
+    return self._index_select_safe(src, index)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\navas\anaconda3\Lib\site-packages\torch_geometric\nn\conv\message_passing.py", line 290, in 
+_index_select_safe
+    raise e
+  File "C:\Users\navas\anaconda3\Lib\site-packages\torch_geometric\nn\conv\message_passing.py", line 271, in 
+_index_select_safe
+    return src.index_select(self.node_dim, index)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+RuntimeError: [enforce fail at alloc_cpu.cpp:117] data. DefaultCPUAllocator: not enough memory: you tried to allocate 
+5999202304 bytes.

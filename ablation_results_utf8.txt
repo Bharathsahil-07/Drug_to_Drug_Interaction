@@ -1,0 +1,26 @@
+﻿python : Traceback (most recent call last):
+At line:1 char:1
++ python ablation_study_manager.py > ablation_results_10seeds.txt 2>&1
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Traceback (most recent call last)::String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  File "C:\Users\navas\Downloads\sdp2\Sdp\drug_interaction_project\ablation_study_manager.py", line 12, in <module>
+    from rigorous_graph_builder import RigorousDrugGraphBuilder
+  File "C:\Users\navas\Downloads\sdp2\Sdp\drug_interaction_project\rigorous_graph_builder.py", line 10, in <module>
+    from sklearn.preprocessing import StandardScaler
+  File "C:\Users\navas\anaconda3\Lib\site-packages\sklearn\__init__.py", line 87, in <module>
+    from .base import clone
+  File "C:\Users\navas\anaconda3\Lib\site-packages\sklearn\base.py", line 19, in <module>
+    from .utils import _IS_32BIT
+  File "C:\Users\navas\anaconda3\Lib\site-packages\sklearn\utils\__init__.py", line 22, in <module>
+    from ._estimator_html_repr import estimator_html_repr
+  File "C:\Users\navas\anaconda3\Lib\site-packages\sklearn\utils\_estimator_html_repr.py", line 10, in <module>
+    from .fixes import parse_version
+  File "C:\Users\navas\anaconda3\Lib\site-packages\sklearn\utils\fixes.py", line 17, in <module>
+    import scipy.stats
+  File "C:\Users\navas\anaconda3\Lib\site-packages\scipy\stats\__init__.py", line 613, in <module>
+    from ._kde import gaussian_kde
+  File "C:\Users\navas\anaconda3\Lib\site-packages\scipy\stats\_kde.py", line 33, in <module>
+    from . import _mvn
+ImportError: DLL load failed while importing _mvn: The paging file is too small for this operation to complete.

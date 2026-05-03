@@ -1,0 +1,220 @@
+# Model Audit For Paper Readiness (10 Required Sections)
+
+Generated on: 2026-03-27
+Project: Sdp/drug_interaction_project
+
+---
+
+## 1. Dataset Details (VERY IMPORTANT)
+
+### 📊 Core dataset info
+- Total drugs (nodes): 19,830
+- Total interactions (rows/known edges source): 1,455,276
+- Source: DrugBank XML and derived CSVs
+- DrugBank metadata in XML header: version="5.1", exported-on="2026-01-04"
+- Additional merged datasets:
+  - No clearly integrated external benchmark dataset found in serving path
+  - Optional enrichment script exists (PubChem-based in data_enrichment.py), but not guaranteed complete in current serving snapshot
+
+### 🧪 Feature availability (ACTUAL use)
+- SMILES: ✅ used where available
+  - Used in graph_builder.py (chemical feature extraction for node features if present)
+  - Used post-hoc in services/feature_importance.py for chemical similarity
+- ATC codes: ✅/⚠️ partially used
+  - Used post-hoc for ATC similarity in services/feature_importance.py
+  - Not clearly used as a core training feature in graph_builder.py
+- Target/enzyme data: ⚠️ partial
+  - Target-like overlap proxy from mechanism text is used post-hoc
+  - Explicit enzyme-overlap module is not implemented as a dedicated model feature
+- Text descriptions: ✅ used
+  - TF-IDF from description + mechanism in graph_builder.py
+- Side effects: ❌ not implemented as a dedicated feature in training/inference path
+
+---
+
+## 2. Task Definition (Exact Outputs)
+
+- Binary interaction prediction: ✅ yes
+- Severity classification (3-class): ✅ yes (Minor/Moderate/Major)
+- Confidence score: ✅ yes (regression head)
+
+How confidence is trained:
+- Confidence head uses MSE loss against edge_labels (same binary labels used for interaction positives/negatives).
+- Therefore confidence target is not an independently curated clinical confidence label.
+- It behaves as a proxy confidence objective rather than a separate labeled confidence dataset.
+
+Novelty implication:
+- Confidence head is present (good), but supervision design is weak for publication unless justified or redesigned.
+
+---
+
+## 3. Model Architecture (Code-Level Detail)
+
+### 🔧 Encoder
+- PyTorch Geometric GATConv is used (gcn_model.py)
+- Architecture:
+  - conv1 = GATConv(input_dim, hidden_dim, heads=heads)
+  - conv2 = GATConv(hidden_dim * heads, hidden_dim, heads=heads)
+  - conv3 = GATConv(hidden_dim * heads, embedding_dim, heads=1, concat=False)
+- Attention type:
+  - Standard GATConv multi-head attention
+  - Multi-head concat in first two layers
+  - Final layer uses single head without concat
+  - No explicit edge-aware attention variant found
+
+### 🔧 Decoder
+- Pair representation: concatenation of two node embeddings
+- Combination strategy: concat (not dot-product, not bilinear)
+
+### 🔧 Heads and losses
+1. Interaction head
+- MLP: Linear(2E->256) -> LeakyReLU -> Dropout -> Linear(256->128) -> LeakyReLU -> Linear(128->1)
+- Loss: BCEWithLogitsLoss
+
+2. Severity head
+- MLP: Linear(2E->128) -> LeakyReLU -> Dropout -> Linear(128->64) -> LeakyReLU -> Linear(64->3)
+- Loss: CrossEntropyLoss (on positive edges)
+
+3. Confidence head
+- MLP: Linear(2E->64) -> ReLU -> Linear(64->1) -> Sigmoid
+- Loss: MSELoss vs edge_labels
+
+Combined loss weighting:
+- Total = interaction_loss + 0.5 * severity_loss + 0.2 * confidence_loss
+
+---
+
+## 4. Training Setup
+
+Negative sampling strategy:
+- Random negative sampling via torch_geometric.utils.negative_sampling
+- Hard negatives: ❌ not implemented
+
+Loss combination:
+- Fixed manual weights (1.0, 0.5, 0.2)
+- Learned uncertainty weighting: ❌ not implemented
+
+Train/val/test split:
+- Edge split on unique undirected edges
+- Default split: train 80%, val 10%, test 10%
+- Reverse edges re-added for message passing graph
+
+---
+
+## 5. Evaluation Metrics (CRITICAL)
+
+Currently measured in codebase (training/evaluation scripts):
+- AUC-ROC: ✅
+- AUPRC: ✅
+- F1 score: ✅
+- Accuracy: ✅
+- Precision/Recall: ✅
+- Severity metrics (severity accuracy, severity macro F1): ✅
+- Calibration metrics:
+  - ECE: ✅ (in comprehensive/ablation scripts)
+  - Brier score: ✅ (in comprehensive/ablation scripts)
+
+Important caveat:
+- API dashboard/model metric endpoints include static placeholder numbers in current implementation.
+- Strong evidence should come from offline evaluation scripts and saved experiment outputs.
+
+---
+
+## 6. Baselines (Acceptance-Critical)
+
+Observed baseline status:
+- Multi-task vs single-task ablation: ✅ available
+- Direct strong external baselines (Decagon, graph transformers, etc.): ❌ not found in current code
+- GCN baseline in comprehensive_evaluation.py: ⚠️ appears simulated/document-derived, not full in-repo retrain benchmark
+- MLP/no-graph baseline: ❌ not implemented in main benchmark scripts
+
+Publishability warning:
+- Without strong real baselines (not simulated), paper acceptance risk is high.
+
+---
+
+## 7. Explainability Layer (VERY IMPORTANT)
+
+Implemented explainability:
+1. Attention-based neighbor influence (services/model_explainer.py)
+2. Post-hoc feature similarity (services/feature_importance.py):
+- chemical similarity
+- ATC similarity
+- target overlap proxy
+- graph context similarity
+
+Training integration:
+- Explainability signals are used post-hoc at inference/reporting
+- They are not jointly optimized as an explanation loss during model training
+
+Unified explanation score:
+- ❌ no single calibrated explanation score found
+- Output is multi-part explanations, not a fused reliability index
+
+Novelty opportunity:
+- Build a unified reliability/explanation score combining graph attention + biological feature evidence.
+
+---
+
+## 8. Deployment / System Aspect (HUGE ADVANTAGE)
+
+- API implemented: ✅ yes (Flask)
+- Database fallback logic: ✅ yes (known interactions returned directly)
+- Real-time inference: ✅ yes (API inference for unseen pairs)
+
+System-paper angle:
+- Strong candidate: hybrid knowledge + model serving + explainability + scan pipeline + dashboard + graph visualization.
+
+---
+
+## 9. Results Snapshot (Current Examples)
+
+Live API example 1 (model-based unknown pair):
+- Input: DB12445 + DB00003
+- Output: source=model
+- Probability: 0.4646
+- Risk: Low Risk
+- Description: GAT model prediction: 46.46% probability of interaction
+
+Live API example 2 (known database pair):
+- Input: DB00001 + DB06605
+- Output: source=database
+- Probability: 1.0
+- Risk: HIGH
+- Description: Apixaban may increase the anticoagulant activities of Lepirudin.
+
+Interpretation:
+- Confirms hybrid path is active and working (database path + model path).
+
+---
+
+## 10. Claimed Novelty (Honest Assessment)
+
+Potentially novel/useful contributions:
+1. Hybrid serving design:
+- deterministic DrugBank fallback + GAT inference for unknown pairs
+
+2. Multi-task setup in one graph model:
+- interaction + severity + confidence outputs
+
+3. Production-style explainability stack:
+- attention neighbors + post-hoc biological feature contributions
+
+4. End-to-end system integration:
+- API + dashboard + 3D graph + scan-medicine OCR workflow
+
+What is not yet strong enough as novelty by itself:
+1. Confidence head supervision (currently proxy target)
+2. Baseline coverage (missing robust external competitors)
+3. Some reported API metrics are placeholders
+
+Immediate experiments required for stronger publication readiness:
+1. Add real baselines: GCN, MLP, and at least one known DDI graph baseline (for example Decagon-style comparator)
+2. Report full metrics with confidence intervals across multiple seeds
+3. Provide proper confidence-label strategy or uncertainty calibration analysis
+4. Add ablation proving explainability signals correlate with reliable predictions
+
+---
+
+## Final Verdict (Current)
+This project has strong system engineering and practical deployment value, and a promising model architecture. For top-tier publishability, baseline rigor and confidence-supervision methodology must be improved before submission.

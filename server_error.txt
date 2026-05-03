@@ -1,0 +1,10 @@
+Using CPU. Note: This module is much faster with a GPU.
+Traceback (most recent call last):
+  File "C:\Users\navas\Downloads\sdp2\Sdp\drug_interaction_project\api_server.py", line 1039, in <module>
+    load_model_and_data()
+  File "C:\Users\navas\Downloads\sdp2\Sdp\drug_interaction_project\api_server.py", line 143, in load_model_and_data
+    print(f"\U0001f4ca {len(drugs_df)} drugs, {len(interactions_db)} interactions")
+  File "C:\Users\navas\anaconda3\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\U0001f4ca' in position 0: character maps to <undefined>
